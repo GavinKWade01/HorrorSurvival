@@ -8,7 +8,7 @@ public class PlayerController : MonoBehaviour
     //properties used to help check whether player can use certain mechanics. These are mostly to keep the code clean and organized
     //Kind of a rudimentary/crude state machine
     public bool PlayerCanMove { get; private set; } = true;
-    private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey) && !playerIsCrouching && currentStamina > 0;
+    private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey) && Input.GetKey(sprintKeyTwo) && !playerIsCrouching && currentStamina > 0;
     private bool PlayerShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded && !playerIsCrouching;
     private bool PlayerShouldCrouch => Input.GetKeyDown(crouchKey) && !playerInCrouchAnimation && characterController.isGrounded;
     #endregion
@@ -28,6 +28,7 @@ public class PlayerController : MonoBehaviour
     //The keys that players must press to use mechanics/actions
     [Header("Controls")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
+    [SerializeField] private KeyCode sprintKeyTwo = KeyCode.W;
     [SerializeField] private KeyCode jumpKey = KeyCode.Space;
     [SerializeField] private KeyCode crouchKey = KeyCode.LeftControl;
     #endregion
@@ -49,63 +50,48 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float staminaRegenRate = 10f;
     [SerializeField] private float staminaDepletionRate = 20f;
     [SerializeField] private float currentStamina;
-    [SerializeField] private float staminaRegenDelay = 5f;
-    [SerializeField] private float staminaRegenTimer;
+    //Temporary stamina regen delay
+    [SerializeField] private float newStamina;
+    //[SerializeField] private float staminaRegenDelay = 2f;
+    //[SerializeField] private float staminaRegenTimer;
     #endregion
 
     #region CameraParameters
     //Parameters for looking around with mouse
     [Header("Look Parameters")]
-    [SerializeField, Range(1, 10)]
-    private float lookSpeedX = 2f;
-    [SerializeField, Range(1, 10)]
-    private float lookSpeedY = 2f;
-    [SerializeField, Range(1, 100)]
-    private float upperLookLimit = 80f;
-    [SerializeField, Range(1, 100)]
-    private float lowerLookLimit = 80f;
+    [SerializeField, Range(1, 10)] private float lookSpeedX = 2f;
+    [SerializeField, Range(1, 10)] private float lookSpeedY = 2f;
+    [SerializeField, Range(1, 100)] private float upperLookLimit = 90f;
+    [SerializeField, Range(1, 100)] private float lowerLookLimit = 90f;
     #endregion
 
     #region JumpParameters
     //Parameters for jump height and gravity
     [Header("Jumping Parameters")]
-    [SerializeField]
-    private float jumpForce = 8f;
-    [SerializeField]
-    private float gravity = 30f;
+    [SerializeField] private float jumpForce = 8f;
+    [SerializeField] private float gravity = 30f;
     #endregion
 
     #region CrouchParameters
     //Parameters for crouching. The height and center will directly affect the CharacterController height and center.
     [Header("Crouch Parameters")]
-    [SerializeField]
-    private float crouchingHeight = 0.5f;
-    [SerializeField]
-    private float standingHeight = 2f;
-    [SerializeField]
-    private float timeToCrouch = 0.25f; //How long should the crouching animation take?
-    [SerializeField]
-    private Vector3 crouchingCenter = new Vector3(0, 0.5f, 0);
-    [SerializeField]
-    private Vector3 standingCenter = new Vector3(0, 0, 0); //Didn't use Vector3.Zero so that it would be customizable in inspector
+    [SerializeField] private float crouchingHeight = 0.5f;
+    [SerializeField] private float standingHeight = 2f;
+    [SerializeField] private float timeToCrouch = 0.25f; //How long should the crouching animation take?
+    [SerializeField] private Vector3 crouchingCenter = new Vector3(0, 0.5f, 0);
+    [SerializeField] private Vector3 standingCenter = new Vector3(0, 0, 0); //Didn't use Vector3.Zero so that it would be customizable in inspector
     private bool playerIsCrouching; //Is the player currently crouched?
     private bool playerInCrouchAnimation; //Is the player currently in the middle of the crouching animation?
     #endregion
 
     #region HeadbobParameters
     [Header("Headbob Parameters")]
-    [SerializeField]
-    private float walkBobSpeed = 14f;
-    [SerializeField]
-    private float walkBobAmount = 0.05f;
-    [SerializeField]
-    private float sprintBobSpeed = 18f;
-    [SerializeField]
-    private float sprintBobAmount = 0.1f;
-    [SerializeField]
-    private float crouchBobSpeed = 8f;
-    [SerializeField]
-    private float crouchBobAmount = 0.025f;
+    [SerializeField] private float walkBobSpeed = 14f;
+    [SerializeField] private float walkBobAmount = 0.05f;
+    [SerializeField] private float sprintBobSpeed = 18f;
+    [SerializeField] private float sprintBobAmount = 0.1f;
+    [SerializeField] private float crouchBobSpeed = 8f;
+    [SerializeField] private float crouchBobAmount = 0.025f;
     private float defaultYPosCamera = 0;
     private float timer;
     #endregion
@@ -177,14 +163,19 @@ public class PlayerController : MonoBehaviour
         {
             currentStamina -= staminaDepletionRate * Time.deltaTime;
             currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+            newStamina = currentStamina;
         }else if (!PlayerIsSprinting)
         {
-            RegenerateStamina();
-            currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+            newStamina += staminaRegenRate * Time.deltaTime;
+            newStamina = Mathf.Clamp(newStamina, 0f, maxStamina);
+            if (newStamina > 20)
+            {
+                currentStamina = newStamina;
+            }
         }
     }
 
-    //COME BACK TO THIS LATER
+    /*COME BACK TO THIS LATER
     //Stamina Regeneration delay so the player cannot infinitely run. 
     public void RegenerateStamina()
     {
@@ -201,6 +192,7 @@ public class PlayerController : MonoBehaviour
         }
 
     }
+    */
 
     private void HandleMovementInput()
     {
